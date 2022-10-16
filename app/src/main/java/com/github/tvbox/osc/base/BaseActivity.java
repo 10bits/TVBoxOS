@@ -17,6 +17,8 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.PermissionChecker;
 
 import com.github.tvbox.osc.R;
+import com.github.tvbox.osc.base.impl.IPresenter;
+import com.github.tvbox.osc.base.impl.IView;
 import com.github.tvbox.osc.callback.EmptyCallback;
 import com.github.tvbox.osc.callback.LoadingCallback;
 import com.github.tvbox.osc.util.AppManager;
@@ -37,10 +39,11 @@ import me.jessyan.autosize.internal.CustomAdapt;
  * @date :2020/12/17
  * @description:
  */
-public abstract class BaseActivity extends AppCompatActivity implements CustomAdapt {
+public abstract class BaseActivity<T extends IPresenter> extends AppCompatActivity implements CustomAdapt, IView {
     protected Context mContext;
+    protected Bundle savedInstanceState;
     private LoadService mLoadService;
-
+    protected T mPresenter;
     private static float screenRatio = -100.0f;
 
     @Override
@@ -57,10 +60,77 @@ public abstract class BaseActivity extends AppCompatActivity implements CustomAd
             th.printStackTrace();
         }
         super.onCreate(savedInstanceState);
+        this.savedInstanceState = savedInstanceState;
         setContentView(getLayoutResID());
         mContext = this;
         AppManager.getInstance().addActivity(this);
         init();
+        onCreateActivity();
+        mPresenter = initInjector();
+        attachView();
+//        initData();
+        bindView();
+        bindEvent();
+        firstRequest();
+    }
+
+    /**
+     * 首次逻辑操作
+     */
+    protected void firstRequest() {
+
+    }
+
+    /**
+     * 事件触发绑定
+     */
+    protected void bindEvent() {
+
+    }
+
+    /**
+     * 控件绑定
+     */
+    protected void bindView() {
+
+    }
+
+    /**
+     * P层绑定V层
+     */
+    private void attachView() {
+        if (null != mPresenter) {
+            mPresenter.attachView(this);
+        }
+    }
+
+    /**
+     * P层解绑V层
+     */
+    private void detachView() {
+        if (null != mPresenter) {
+            mPresenter.detachView();
+        }
+    }
+
+    /**
+     * 数据初始化
+     */
+//    protected void initData() {
+//
+//    }
+
+    /**
+     * P层绑定   若无则返回null;
+     */
+    protected T initInjector() {
+        return null;
+    }
+
+    /**
+     * 布局载入  setContentView()
+     */
+    protected void onCreateActivity() {
     }
 
     @Override
@@ -135,6 +205,7 @@ public abstract class BaseActivity extends AppCompatActivity implements CustomAd
 
     @Override
     protected void onDestroy() {
+        detachView();
         super.onDestroy();
         AppManager.getInstance().finishActivity(this);
     }
@@ -216,5 +287,9 @@ public abstract class BaseActivity extends AppCompatActivity implements CustomAd
             getWindow().setBackgroundDrawable(globalWp);
         else
             getWindow().setBackgroundDrawableResource(R.drawable.app_bg);
+    }
+
+    public Context getContext() {
+        return this;
     }
 }

@@ -33,6 +33,8 @@ import com.github.tvbox.osc.bean.AbsSortXml;
 import com.github.tvbox.osc.bean.MovieSort;
 import com.github.tvbox.osc.bean.SourceBean;
 import com.github.tvbox.osc.event.RefreshEvent;
+import com.github.tvbox.osc.presenter.MainPresenterImpl;
+import com.github.tvbox.osc.presenter.contract.MainContract;
 import com.github.tvbox.osc.server.ControlManager;
 import com.github.tvbox.osc.ui.adapter.HomePageAdapter;
 import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter;
@@ -67,7 +69,7 @@ import java.util.List;
 
 import me.jessyan.autosize.utils.AutoSizeUtils;
 
-public class HomeActivity extends BaseActivity {
+public class HomeActivity extends BaseActivity<MainContract.Presenter> implements MainContract.View {
     private LinearLayout topLayout;
     private LinearLayout contentLayout;
     private TextView tvDate;
@@ -455,6 +457,11 @@ public class HomeActivity extends BaseActivity {
     }
 
     @Override
+    protected MainContract.Presenter initInjector() {
+        return new MainPresenterImpl();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         mHandler.post(mRunnable);
@@ -643,5 +650,10 @@ public class HomeActivity extends BaseActivity {
             });
             dialog.show();
         }
+    }
+
+    @Override
+    public void toast(String msg) {
+
     }
 }
