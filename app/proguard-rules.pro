@@ -199,8 +199,8 @@
 }
 
 -keep class com.github.catvod.crawler.*{*;}
-# 迅雷下载模块
--keep class com.xunlei.downloadlib.** {*;}
+## 迅雷下载模块
+#-keep class com.xunlei.downloadlib.** {*;}
 # quickjs引擎
 -keep class com.github.tvbox.quickjs.** {*;}
 # 支持影视的ali相关的jar

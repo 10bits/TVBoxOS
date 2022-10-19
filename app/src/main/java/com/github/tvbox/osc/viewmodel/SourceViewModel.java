@@ -20,7 +20,6 @@ import com.github.tvbox.osc.event.RefreshEvent;
 import com.github.tvbox.osc.util.DefaultConfig;
 import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.LOG;
-import com.github.tvbox.osc.util.thunder.Thunder;
 import com.google.gson.Gson;
 import com.google.gson.JsonArray;
 import com.google.gson.JsonElement;
@@ -828,59 +827,13 @@ public class SourceViewModel extends ViewModel {
     }
 
     private void checkThunder(AbsXml data) {
-        boolean thunderParse = false;
         if (data.movie != null && data.movie.videoList != null && data.movie.videoList.size() == 1) {
             Movie.Video video = data.movie.videoList.get(0);
             if (video != null && video.urlBean != null && video.urlBean.infoList != null && video.urlBean.infoList.size() == 1) {
                 Movie.Video.UrlBean.UrlInfo urlInfo = video.urlBean.infoList.get(0);
-                if (urlInfo != null && urlInfo.beanList.size() == 1 && Thunder.isSupportUrl(urlInfo.beanList.get(0).url)) {
-                    thunderParse = true;
-                    Thunder.parse(App.getInstance(), urlInfo.beanList.get(0).url, new Thunder.ThunderCallback() {
-                        @Override
-                        public void status(int code, String info) {
-                            if (code >= 0) {
-                                LOG.i(info);
-                            } else {
-                                urlInfo.beanList.get(0).name = info;
-                                detailResult.postValue(data);
-                            }
-                        }
-
-                        @Override
-                        public void list(String playList) {
-                            urlInfo.urls = playList;
-                            String[] str = playList.split("#");
-                            List<Movie.Video.UrlBean.UrlInfo.InfoBean> infoBeanList = new ArrayList<>();
-                            for (String s : str) {
-                                if (s.contains("$")) {
-                                    String[] ss = s.split("\\$");
-//                                    if (ss.length >= 2) {
-//                                        infoBeanList.add(new Movie.Video.UrlBean.UrlInfo.InfoBean(ss[0], ss[1]));
-//                                    }
-                                    if (ss.length > 0) {
-                                        if (ss.length >= 2) {
-                                            infoBeanList.add(new Movie.Video.UrlBean.UrlInfo.InfoBean(ss[0], ss[1]));
-                                        } else {
-                                            infoBeanList.add(new Movie.Video.UrlBean.UrlInfo.InfoBean((infoBeanList.size() + 1) + "", ss[0]));
-                                        }
-                                    }
-                                }
-                            }
-                            urlInfo.beanList = infoBeanList;
-                            detailResult.postValue(data);
-                        }
-
-                        @Override
-                        public void play(String url) {
-
-                        }
-                    });
-                }
             }
         }
-        if (!thunderParse) {
-            detailResult.postValue(data);
-        }
+        detailResult.postValue(data);
     }
 
     private AbsXml xml(MutableLiveData<AbsXml> result, String xml, String sourceKey) {

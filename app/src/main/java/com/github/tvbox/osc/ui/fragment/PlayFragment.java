@@ -65,7 +65,6 @@ import com.github.tvbox.osc.util.MD5;
 import com.github.tvbox.osc.util.PlayerHelper;
 import com.github.tvbox.osc.util.VideoParseRuler;
 import com.github.tvbox.osc.util.XWalkUtils;
-import com.github.tvbox.osc.util.thunder.Thunder;
 import com.github.tvbox.osc.viewmodel.SourceViewModel;
 import com.lzy.okgo.OkGo;
 import com.lzy.okgo.callback.AbsCallback;
@@ -844,28 +843,7 @@ public class PlayFragment extends BaseLazyFragment {
             CacheManager.delete(MD5.string2MD5(progressKey), 0);
             CacheManager.delete(MD5.string2MD5(subtitleCacheKey), 0);
         }
-        if (Thunder.play(vs.url, new Thunder.ThunderCallback() {
-            @Override
-            public void status(int code, String info) {
-                if (code < 0) {
-                    setTip(info, false, true);
-                } else {
-                    setTip(info, true, false);
-                }
-            }
-
-            @Override
-            public void list(String playList) {
-            }
-
-            @Override
-            public void play(String url) {
-                playUrl(url, null);
-            }
-        })) {
-            mController.showParse(false);
-            return;
-        }
+        mController.showParse(false);
         sourceViewModel.getPlay(sourceKey, mVodInfo.playFlag, progressKey, vs.url, subtitleCacheKey);
     }
 
