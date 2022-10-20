@@ -28,8 +28,10 @@ import com.github.tvbox.osc.ui.dialog.XWalkInitDialog;
 import com.github.tvbox.osc.util.FastClickCheckUtil;
 import com.github.tvbox.osc.util.HawkConfig;
 import com.github.tvbox.osc.util.HistoryHelper;
+import com.github.tvbox.osc.util.JsEngineHelp;
 import com.github.tvbox.osc.util.OkGoHelper;
 import com.github.tvbox.osc.util.PlayerHelper;
+import com.github.tvbox.osc.util.js.JSEngine;
 import com.lzy.okgo.OkGo;
 import com.lzy.okgo.callback.FileCallback;
 import com.lzy.okgo.model.Progress;
@@ -61,6 +63,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
     private TextView tvApi;
     private TextView tvEpgApi;
     private TextView tvHomeApi;
+    private TextView tvJs;
     private TextView tvDns;
     private TextView tvHomeRec;
     private TextView tvHistoryNum;
@@ -96,6 +99,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
         tvApi = findViewById(R.id.tvApi);
         tvEpgApi = findViewById(R.id.tvEpgApi);
         tvHomeApi = findViewById(R.id.tvHomeApi);
+        tvJs=findViewById(R.id.tvJsEngine);
         tvDns = findViewById(R.id.tvDns);
         tvHomeRec = findViewById(R.id.tvHomeRec);
         tvHistoryNum = findViewById(R.id.tvHistoryNum);
@@ -105,6 +109,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
         tvParseWebView.setText(Hawk.get(HawkConfig.PARSE_WEBVIEW, true) ? "系统自带" : "XWalkView");
         tvApi.setText(Hawk.get(HawkConfig.API_URL, ""));
         tvEpgApi.setText("EPG地址已隐藏");
+        tvJs.setText(JsEngineHelp.engines.get(Hawk.get(HawkConfig.JS_ENGINE,0)));
         tvDns.setText(OkGoHelper.dnsHttpsList.get(Hawk.get(HawkConfig.DOH_URL, 0)));
         tvHomeRec.setText(getHomeRecName(Hawk.get(HawkConfig.HOME_REC, 0)));
         tvHistoryNum.setText(HistoryHelper.getHistoryNumName(Hawk.get(HawkConfig.HISTORY_NUM, 0)));
@@ -203,7 +208,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
                             ApiConfig.get().setSourceBean(value);
                             tvHomeApi.setText(ApiConfig.get().getHomeSourceBean().getName());
 
-                            Intent intent =new Intent(mContext, HomeActivity.class);
+                            Intent intent = new Intent(mContext, HomeActivity.class);
                             intent.setFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK);
                             Bundle bundle = new Bundle();
                             bundle.putBoolean("useCache", true);
@@ -228,6 +233,41 @@ public class ModelSettingFragment extends BaseLazyFragment {
                     }, sites, sites.indexOf(ApiConfig.get().getHomeSourceBean()));
                     dialog.show();
                 }
+            }
+        });
+        findViewById(R.id.llJsEngine).setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                FastClickCheckUtil.check(v);
+                int curJs = Hawk.get(HawkConfig.JS_ENGINE, 0);
+                ArrayList<Integer> engines = new ArrayList<>();
+                engines.add(0);
+                engines.add(1);
+                SelectDialog<Integer> dialog = new SelectDialog<>(mActivity);
+                dialog.setTip("请选择爬虫JS引擎");
+                dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<Integer>() {
+                    @Override
+                    public void click(Integer value, int pos) {
+                        Hawk.put(HawkConfig.JS_ENGINE, pos);
+                        tvJs.setText(JsEngineHelp.engines.get(pos));
+                    }
+
+                    @Override
+                    public String getDisplay(Integer val) {
+                        return JsEngineHelp.engines.get(val);
+                    }
+                }, new DiffUtil.ItemCallback<Integer>() {
+                    @Override
+                    public boolean areItemsTheSame(@NonNull @NotNull Integer oldItem, @NonNull @NotNull Integer newItem) {
+                        return oldItem.equals(newItem);
+                    }
+
+                    @Override
+                    public boolean areContentsTheSame(@NonNull @NotNull Integer oldItem, @NonNull @NotNull Integer newItem) {
+                        return oldItem.equals(newItem);
+                    }
+                }, engines, curJs);
+                dialog.show();
             }
         });
         findViewById(R.id.llDns).setOnClickListener(new View.OnClickListener() {
@@ -406,7 +446,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
                 int defaultPos = 0;
                 ArrayList<Integer> players = PlayerHelper.getExistPlayerTypes();
                 ArrayList<Integer> renders = new ArrayList<>();
-                for(int p = 0; p<players.size(); p++) {
+                for (int p = 0; p < players.size(); p++) {
                     renders.add(p);
                     if (players.get(p) == playerType) {
                         defaultPos = p;

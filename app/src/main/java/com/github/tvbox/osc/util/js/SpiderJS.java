@@ -3,8 +3,11 @@ package com.github.tvbox.osc.util.js;
 import android.content.Context;
 
 import com.github.catvod.crawler.Spider;
+import com.github.tvbox.osc.util.HawkConfig;
+import com.github.tvbox.quickjs.JSArray;
 import com.github.tvbox.quickjs.JSModule;
 import com.github.tvbox.quickjs.JSObject;
+import com.orhanobut.hawk.Hawk;
 import com.sun.script.javascript.RhinoScriptEngine;
 
 import org.mozilla.javascript.ContextFactory;
@@ -16,6 +19,7 @@ import org.mozilla.javascript.Scriptable;
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.BiConsumer;
 
 import javax.script.Invocable;
 import javax.script.ScriptException;
@@ -30,8 +34,8 @@ public class SpiderJS extends Spider {
     private String js;
     private String ext;
     private JSObject jsObject = null;
+    private int engine;
     private JSEngine.JSThread jsThread = null;
-    private Invocable invocable = null;
     private NativeFunction initFunc = null;
     private NativeFunction homeFunc = null;
     private NativeFunction homeVodFunc = null;
@@ -39,6 +43,7 @@ public class SpiderJS extends Spider {
     private NativeFunction detailFunc = null;
     private NativeFunction playFunc = null;
     private NativeFunction searchFunc = null;
+
 
     public SpiderJS(String key, String js, String ext) {
         this.key = key;
@@ -72,14 +77,19 @@ public class SpiderJS extends Spider {
                     } catch (Exception e) {
                         e.printStackTrace();
                     }
+                    engine = Hawk.get(HawkConfig.JS_ENGINE, 0);
                     jsContent = jsContent.replace("__JS_SPIDER__", "globalThis." + moduleKey);
-//                    ctx.evaluateModule(jsContent, js);
-//                    jsObject = (JSObject) ctx.getProperty(globalThis, moduleKey);
-//                    jsObject.getJSFunction("init").call(ext);
-
+                    //use quickJs
+                    if (engine == 1) {
+                        ctx.evaluateModule(jsContent, js);
+                        jsObject = (JSObject) ctx.getProperty(globalThis, moduleKey);
+                        jsObject.getJSFunction("init").call(ext);
+                        return null;
+                    }
+                    //use rhinoJs
                     SimpleBindings bindings = new SimpleBindings();
                     bindings.put("globalThis", new HashMap<String, Object>());
-                    bindings.put("java",new AnalyzeRule().setContent(""));
+                    bindings.put("java", new AnalyzeRule().setContent(""));
 
                     RhinoScriptEngine engine = (RhinoScriptEngine) new ScriptEngineManager().getEngineByName("rhino");
                     try {
@@ -87,33 +97,35 @@ public class SpiderJS extends Spider {
                     } catch (ScriptException e) {
                         e.printStackTrace();
                     }
-                    HashMap<String, Object> globalFuncs = (HashMap<String, Object>) bindings.get("globalThis");
-                    Object modules = globalFuncs.get(moduleKey);
-                    if (modules != null) {
-                        NativeObject moduleFuncs = (NativeObject) modules;
-                        if (moduleFuncs.get("init") != null) {
-                            initFunc = (NativeFunction) moduleFuncs.get("init");
+                    if (bindings.get("globalThis") != null) {
+                        HashMap<String, Object> globalFuncs = (HashMap<String, Object>) bindings.get("globalThis");
+                        Object modules = globalFuncs.get(moduleKey);
+                        if (modules instanceof NativeObject) {
+                            NativeObject moduleFuncs = (NativeObject) modules;
+                            if (moduleFuncs.get("init") instanceof NativeFunction) {
+                                initFunc = (NativeFunction) moduleFuncs.get("init");
+                            }
+                            if (moduleFuncs.get("home") instanceof NativeFunction) {
+                                homeFunc = (NativeFunction) moduleFuncs.get("home");
+                            }
+                            if (moduleFuncs.get("homeVod") instanceof NativeFunction) {
+                                homeVodFunc = (NativeFunction) moduleFuncs.get("homeVod");
+                            }
+                            if (moduleFuncs.get("category") instanceof NativeFunction) {
+                                categoryFunc = (NativeFunction) moduleFuncs.get("category");
+                            }
+                            if (moduleFuncs.get("detail") instanceof NativeFunction) {
+                                detailFunc = (NativeFunction) moduleFuncs.get("detail");
+                            }
+                            if (moduleFuncs.get("play") instanceof NativeFunction) {
+                                playFunc = (NativeFunction) moduleFuncs.get("play");
+                            }
+                            if (moduleFuncs.get("search") instanceof NativeFunction) {
+                                searchFunc = (NativeFunction) moduleFuncs.get("search");
+                            }
                         }
-                        if (moduleFuncs.get("home") != null) {
-                            homeFunc = (NativeFunction) moduleFuncs.get("home");
-                        }
-                        if (moduleFuncs.get("homeVod") != null) {
-                            homeVodFunc = (NativeFunction) moduleFuncs.get("homeVod");
-                        }
-                        if (moduleFuncs.get("category") != null) {
-                            categoryFunc = (NativeFunction) moduleFuncs.get("category");
-                        }
-                        if (moduleFuncs.get("detail") != null) {
-                            detailFunc = (NativeFunction) moduleFuncs.get("detail");
-                        }
-                        if (moduleFuncs.get("play") != null) {
-                            playFunc = (NativeFunction) moduleFuncs.get("play");
-                        }
-                        if (moduleFuncs.get("search") != null) {
-                            searchFunc = (NativeFunction) moduleFuncs.get("search");
-                        }
-
                     }
+
                     return null;
                 });
             } catch (Throwable throwable) {
@@ -123,7 +135,7 @@ public class SpiderJS extends Spider {
     }
 
     static org.mozilla.javascript.Context getScriptContext() {
-        org.mozilla.javascript.Context ctx=ContextFactory.getGlobal().enterContext();
+        org.mozilla.javascript.Context ctx = ContextFactory.getGlobal().enterContext();
         ctx.getWrapFactory().setJavaPrimitiveWrap(false);
         return ctx;
     }
@@ -144,7 +156,7 @@ public class SpiderJS extends Spider {
     public void init(Context context, String extend) {
         super.init(context, extend);
         checkLoaderJS();
-        if (initFunc != null) {
+        if (engine == 0 && initFunc != null) {
             Scriptable scope = initFunc.getPrototype();
             initFunc.call(getScriptContext(), scope, scope, new Object[]{extend});
         }
@@ -152,8 +164,9 @@ public class SpiderJS extends Spider {
 
     @Override
     public String homeContent(boolean filter) {
-
-        //return postFunc("home", filter);
+        if (engine == 1) {
+            return postFunc("home", filter);
+        }
         if (homeFunc != null) {
             Scriptable scope = homeFunc.getPrototype();
             return homeFunc.call(getScriptContext(), scope, scope, new Object[]{filter}).toString();
@@ -163,8 +176,9 @@ public class SpiderJS extends Spider {
 
     @Override
     public String homeVideoContent() {
-
-        //return postFunc("homeVod");
+        if (engine == 1) {
+            return postFunc("homeVod");
+        }
         if (homeVodFunc != null) {
             Scriptable scope = homeVodFunc.getPrototype();
             return homeVodFunc.call(getScriptContext(), scope, scope, new Object[]{}).toString();
@@ -174,65 +188,77 @@ public class SpiderJS extends Spider {
 
     @Override
     public String categoryContent(String tid, String pg, boolean filter, HashMap<String, String> extend) {
-//        try {
-//            JSObject obj = jsThread.post((ctx, globalThis) -> {
-//                JSObject o = ctx.createNewJSObject();
-//                if (extend != null) {
-//                    for (String s : extend.keySet()) {
-//                        o.setProperty(s, extend.get(s));
-//                    }
-//                }
-//                return o;
-//            });
-//            return postFunc("category", tid, pg, filter, obj);
-//        } catch (Throwable throwable) {
-//            throwable.printStackTrace();
-//        }
-        if (categoryFunc != null) {
-            Scriptable scope = categoryFunc.getPrototype();
-            return categoryFunc.call(getScriptContext(), scope, scope, new Object[]{tid, pg, filter, extend}).toString();
+        if (engine == 0) {
+            if (categoryFunc != null) {
+                Scriptable scope = categoryFunc.getPrototype();
+                return categoryFunc.call(getScriptContext(), scope, scope, new Object[]{tid, pg, filter, extend}).toString();
+            }
+            return "";
         }
+        try {
+            JSObject obj = jsThread.post((ctx, globalThis) -> {
+                JSObject o = ctx.createNewJSObject();
+                if (extend != null) {
+                    for (String s : extend.keySet()) {
+                        o.setProperty(s, extend.get(s));
+                    }
+                }
+                return o;
+            });
+            return postFunc("category", tid, pg, filter, obj);
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        }
+
         return "";
 
     }
 
     @Override
     public String detailContent(List<String> ids) {
-
-//        return postFunc("detail", ids.get(0));
+        if (engine == 1) {
+            return postFunc("detail", ids.get(0));
+        }
         if (detailFunc != null) {
             Scriptable scope = detailFunc.getPrototype();
-            return detailFunc.call(getScriptContext(), scope, scope, new Object[]{ids}).toString();
+            return detailFunc.call(getScriptContext(), scope, scope, new Object[]{ids.get(0)}).toString();
         }
         return "";
     }
 
     @Override
     public String playerContent(String flag, String id, List<String> vipFlags) {
-//        try {
-//            JSArray array = jsThread.post((ctx, globalThis) -> {
-//                JSArray arr = ctx.createNewJSArray();
-//                if (vipFlags != null) {
-//                    for (int i = 0; i < vipFlags.size(); i++) {
-//                        arr.set(vipFlags.get(i), i);
-//                    }
-//                }
-//                return arr;
-//            });
-//            return postFunc("play", flag, id, array);
-//        } catch (Throwable throwable) {
-//            throwable.printStackTrace();
-//        }
-        if (playFunc != null) {
-            Scriptable scope = playFunc.getPrototype();
-            return playFunc.call(getScriptContext(), scope, scope, new Object[]{flag, id, vipFlags}).toString();
+        if (engine == 0) {
+            if (playFunc != null) {
+                Scriptable scope = playFunc.getPrototype();
+                return playFunc.call(getScriptContext(), scope, scope, new Object[]{flag, id, vipFlags}).toString();
+            }
+            return "";
         }
+        try {
+            JSArray array = jsThread.post((ctx, globalThis) -> {
+                JSArray arr = ctx.createNewJSArray();
+                if (vipFlags != null) {
+                    for (int i = 0; i < vipFlags.size(); i++) {
+                        arr.set(vipFlags.get(i), i);
+                    }
+                }
+                return arr;
+            });
+            return postFunc("play", flag, id, array);
+        } catch (Throwable throwable) {
+            throwable.printStackTrace();
+        }
+
         return "";
     }
 
     @Override
     public String searchContent(String key, boolean quick) {
-//        return postFunc("search", key, quick);
+        if (engine == 1) {
+            return postFunc("search", key, quick);
+        }
+
         if (searchFunc != null) {
             Scriptable scope = searchFunc.getPrototype();
             return searchFunc.call(getScriptContext(), scope, scope, new Object[]{key, quick}).toString();
