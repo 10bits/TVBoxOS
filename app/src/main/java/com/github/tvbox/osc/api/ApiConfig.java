@@ -35,12 +35,16 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
+import io.reactivex.Observable;
 
 /**
  * @author pj567
@@ -206,6 +210,186 @@ public class ApiConfig {
                 });
     }
 
+    public Observable<Boolean> loadSpiderConfig(boolean useCache) {
+        return Observable.create(e -> {
+            String apiUrl = Hawk.get(HawkConfig.API_URL, "");
+            if (apiUrl.isEmpty()) {
+//                callback.error("-1");
+                e.onError(new Throwable("api url is empty"));
+                e.onComplete();
+                return;
+            }
+            File cache = new File(App.getInstance().getFilesDir().getAbsolutePath() + "/" + MD5.encode(apiUrl));
+            if (useCache && cache.exists()) {
+                try {
+                    parseJson(apiUrl, cache);
+//                    callback.success();
+                    e.onNext(true);
+                    e.onComplete();
+                    return;
+                } catch (Throwable th) {
+                    th.printStackTrace();
+                    e.onError(th);
+                    e.onComplete();
+                }
+            }
+            String TempKey = null, configUrl = "", pk = ";pk;";
+            if (apiUrl.contains(pk)) {
+                String[] a = apiUrl.split(pk);
+                TempKey = a[1];
+                if (apiUrl.startsWith("clan")) {
+                    configUrl = clanToAddress(a[0]);
+                } else if (apiUrl.startsWith("http")) {
+                    configUrl = a[0];
+                } else {
+                    configUrl = "http://" + a[0];
+                }
+            } else if (apiUrl.startsWith("clan")) {
+                configUrl = clanToAddress(apiUrl);
+            } else if (!apiUrl.startsWith("http")) {
+                configUrl = "http://" + configUrl;
+            } else {
+                configUrl = apiUrl;
+            }
+            String configKey = TempKey;
+            OkGo.<String>get(configUrl)
+                    .headers("User-Agent", userAgent)
+                    .headers("Accept", requestAccept)
+                    .execute(new AbsCallback<String>() {
+                        @Override
+                        public void onSuccess(Response<String> response) {
+                            try {
+                                String json = response.body();
+                                json = FindResult(json, configKey);
+                                parseJson(apiUrl, json);
+                                try {
+                                    File cacheDir = cache.getParentFile();
+                                    if (!cacheDir.exists())
+                                        cacheDir.mkdirs();
+                                    if (cache.exists())
+                                        cache.delete();
+                                    FileOutputStream fos = new FileOutputStream(cache);
+                                    fos.write(json.getBytes("UTF-8"));
+                                    fos.flush();
+                                    fos.close();
+                                } catch (Throwable th) {
+                                    th.printStackTrace();
+                                }
+//                                callback.success();
+                                e.onNext(true);
+                                e.onComplete();
+                            } catch (Throwable th) {
+                                th.printStackTrace();
+//                                callback.error("解析配置失败");
+                                e.onError(new Throwable("解析配置失败"));
+                                e.onComplete();
+                            }
+                        }
+
+                        @Override
+                        public void onError(Response<String> response) {
+                            super.onError(response);
+                            if (cache.exists()) {
+                                try {
+                                    parseJson(apiUrl, cache);
+//                                    callback.success();
+                                    e.onNext(true);
+                                    e.onComplete();
+                                    return;
+                                } catch (Throwable th) {
+                                    th.printStackTrace();
+                                    e.onError(th);
+                                    e.onComplete();
+                                }
+                            }
+//                            callback.error("拉取配置失败\n" + (response.getException() != null ? response.getException().getMessage() : ""));
+                            e.onError(new Throwable("拉取配置失败\n" + (response.getException() != null ? response.getException().getMessage() : "")));
+                            e.onComplete();
+                        }
+
+                        public String convertResponse(okhttp3.Response response) throws Throwable {
+                            String result = "";
+                            if (response.body() == null) {
+                                result = "";
+                            } else {
+                                result = response.body().string();
+                            }
+                            if (apiUrl.startsWith("clan")) {
+                                result = clanContentFix(clanToAddress(apiUrl), result);
+                            }
+                            //假相對路徑
+                            result = fixContentPath(apiUrl, result);
+                            return result;
+                        }
+                    });
+        });
+    }
+
+    public Observable<Boolean> loadSpiderJar(boolean useCache, String spider) {
+        return Observable.create(e -> {
+            String[] urls = spider.split(";md5;");
+            String jarUrl = urls[0];
+            String md5 = urls.length > 1 ? urls[1].trim() : "";
+            File cache = new File(App.getInstance().getFilesDir().getAbsolutePath() + "/csp.jar");
+
+            if (!md5.isEmpty() || useCache) {
+                if (cache.exists() && (useCache || MD5.getFileMd5(cache).equalsIgnoreCase(md5))) {
+                    if (jarLoader.load(cache.getAbsolutePath())) {
+                        e.onNext(true);
+                    } else {
+                        e.onError(new Throwable("jar load from cache failed"));
+                    }
+                    e.onComplete();
+                    return;
+                }
+            }
+            if (jarUrl.isEmpty()) {
+                e.onNext(true);
+                e.onComplete();
+                return;
+            }
+            OkGo.<File>get(jarUrl)
+                    .headers("User-Agent", userAgent)
+                    .headers("Accept", requestAccept)
+                    .execute(new AbsCallback<File>() {
+
+                        @Override
+                        public File convertResponse(okhttp3.Response response) throws Throwable {
+                            File cacheDir = cache.getParentFile();
+                            if (!cacheDir.exists())
+                                cacheDir.mkdirs();
+                            if (cache.exists())
+                                cache.delete();
+                            FileOutputStream fos = new FileOutputStream(cache);
+                            fos.write(response.body().bytes());
+                            fos.flush();
+                            fos.close();
+                            return cache;
+                        }
+
+                        @Override
+                        public void onSuccess(Response<File> response) {
+                            if (response.body().exists()) {
+                                if (jarLoader.load(response.body().getAbsolutePath())) {
+                                    e.onNext(true);
+                                } else {
+                                    e.onError(new Throwable("jar load from url failed"));
+                                }
+                            } else {
+                                e.onError(new Throwable("jar url response body not exists"));
+                            }
+                            e.onComplete();
+                        }
+
+                        @Override
+                        public void onError(Response<File> response) {
+                            super.onError(response);
+                            e.onError(new Throwable("failed get jar url"));
+                            e.onComplete();
+                        }
+                    });
+        });
+    }
 
     public void loadJar(boolean useCache, String spider, LoadConfigCallback callback) {
         String[] urls = spider.split(";md5;");
@@ -405,8 +589,25 @@ public class ApiConfig {
         boolean foundOldSelect = false;
         String ijkCodec = Hawk.get(HawkConfig.IJK_CODEC, "");
         ijkCodes = new ArrayList<>();
+        JsonElement ijkInfo = null;
         if (infoJson.has("ijk")) {
-            for (JsonElement opt : infoJson.get("ijk").getAsJsonArray()) {
+            ijkInfo = infoJson.get("ijk");
+        } else {
+            try {
+                InputStream is = App.getInstance().getAssets().open("ijk_codes.json");
+                byte[] data = new byte[is.available()];
+                is.read(data);
+                String content = new String(data, "UTF-8");
+                JsonObject obj = new Gson().fromJson(content, JsonObject.class);
+                if (obj.has("ijk")) {
+                    ijkInfo = obj.get("ijk");
+                }
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+        if (ijkInfo != null) {
+            for (JsonElement opt : ijkInfo.getAsJsonArray()) {
                 JsonObject obj = (JsonObject) opt;
                 String name = obj.get("group").getAsString();
                 LinkedHashMap<String, String> baseOpt = new LinkedHashMap<>();
