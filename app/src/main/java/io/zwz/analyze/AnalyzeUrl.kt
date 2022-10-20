@@ -3,7 +3,8 @@ package io.zwz.analyze
 import android.annotation.SuppressLint
 import android.text.TextUtils.isEmpty
 import com.google.gson.reflect.TypeToken
-import io.zwz.analyze.constant.AppConst.JS_ENGINE
+import com.script.SimpleBindings
+import io.zwz.analyze.constant.AppConst.SCRIPT_ENGINE
 import io.zwz.analyze.constant.AppConst.UA_NAME
 import io.zwz.analyze.constant.AppConst.userAgent
 import io.zwz.analyze.constant.AppPattern.EXP_PATTERN
@@ -14,7 +15,6 @@ import java.lang.reflect.Type
 import java.net.URLEncoder
 import java.util.*
 import java.util.regex.Pattern
-import javax.script.SimpleBindings
 
 
 /**
@@ -214,7 +214,7 @@ class AnalyzeUrl(
             val expMatcher = EXP_PATTERN.matcher(ruleUrl)
             while (expMatcher.find()) {
                 jsEval = expMatcher.group(1)?.let {
-                    JS_ENGINE.eval(it, bindings)
+                    SCRIPT_ENGINE.eval(it, bindings)
                 } ?: ""
                 if (jsEval is String) {
                     expMatcher.appendReplacement(sb, jsEval)
@@ -337,7 +337,7 @@ class AnalyzeUrl(
         bindings["key"] = key
         bindings["result"] = result
         bindings["baseUrl"] = baseUrl
-        return JS_ENGINE.eval(jsStr, bindings)
+        return SCRIPT_ENGINE.eval(jsStr, bindings)
     }
 
     /**

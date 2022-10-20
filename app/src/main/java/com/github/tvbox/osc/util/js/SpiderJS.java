@@ -8,23 +8,18 @@ import com.github.tvbox.quickjs.JSArray;
 import com.github.tvbox.quickjs.JSModule;
 import com.github.tvbox.quickjs.JSObject;
 import com.orhanobut.hawk.Hawk;
-import com.sun.script.javascript.RhinoScriptEngine;
+import com.script.ScriptException;
+import com.script.SimpleBindings;
+import com.script.javascript.RhinoScriptEngine;
 
 import org.mozilla.javascript.ContextFactory;
 import org.mozilla.javascript.NativeFunction;
-import org.mozilla.javascript.NativeJavaObject;
 import org.mozilla.javascript.NativeObject;
 import org.mozilla.javascript.Scriptable;
 
 import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
-import java.util.function.BiConsumer;
-
-import javax.script.Invocable;
-import javax.script.ScriptException;
-import javax.script.SimpleBindings;
-import javax.script.ScriptEngineManager;
 
 import io.zwz.analyze.AnalyzeRule;
 
@@ -91,7 +86,7 @@ public class SpiderJS extends Spider {
                     bindings.put("globalThis", new HashMap<String, Object>());
                     bindings.put("java", new AnalyzeRule().setContent(""));
 
-                    RhinoScriptEngine engine = (RhinoScriptEngine) new ScriptEngineManager().getEngineByName("rhino");
+                    RhinoScriptEngine engine = new RhinoScriptEngine();
                     try {
                         engine.eval(jsContent, bindings);
                     } catch (ScriptException e) {
@@ -134,7 +129,7 @@ public class SpiderJS extends Spider {
         }
     }
 
-    static org.mozilla.javascript.Context getScriptContext() {
+    static org.mozilla.javascript.Context RhinoContext() {
         org.mozilla.javascript.Context ctx = ContextFactory.getGlobal().enterContext();
         ctx.getWrapFactory().setJavaPrimitiveWrap(false);
         return ctx;
@@ -158,7 +153,7 @@ public class SpiderJS extends Spider {
         checkLoaderJS();
         if (engine == 0 && initFunc != null) {
             Scriptable scope = initFunc.getPrototype();
-            initFunc.call(getScriptContext(), scope, scope, new Object[]{extend});
+            initFunc.call(RhinoContext(), scope, scope, new Object[]{extend});
         }
     }
 
@@ -169,7 +164,7 @@ public class SpiderJS extends Spider {
         }
         if (homeFunc != null) {
             Scriptable scope = homeFunc.getPrototype();
-            return homeFunc.call(getScriptContext(), scope, scope, new Object[]{filter}).toString();
+            return homeFunc.call(RhinoContext(), scope, scope, new Object[]{filter}).toString();
         }
         return "";
     }
@@ -181,7 +176,7 @@ public class SpiderJS extends Spider {
         }
         if (homeVodFunc != null) {
             Scriptable scope = homeVodFunc.getPrototype();
-            return homeVodFunc.call(getScriptContext(), scope, scope, new Object[]{}).toString();
+            return homeVodFunc.call(RhinoContext(), scope, scope, new Object[]{}).toString();
         }
         return "";
     }
@@ -191,7 +186,7 @@ public class SpiderJS extends Spider {
         if (engine == 0) {
             if (categoryFunc != null) {
                 Scriptable scope = categoryFunc.getPrototype();
-                return categoryFunc.call(getScriptContext(), scope, scope, new Object[]{tid, pg, filter, extend}).toString();
+                return categoryFunc.call(RhinoContext(), scope, scope, new Object[]{tid, pg, filter, extend}).toString();
             }
             return "";
         }
@@ -221,7 +216,7 @@ public class SpiderJS extends Spider {
         }
         if (detailFunc != null) {
             Scriptable scope = detailFunc.getPrototype();
-            return detailFunc.call(getScriptContext(), scope, scope, new Object[]{ids.get(0)}).toString();
+            return detailFunc.call(RhinoContext(), scope, scope, new Object[]{ids.get(0)}).toString();
         }
         return "";
     }
@@ -231,7 +226,8 @@ public class SpiderJS extends Spider {
         if (engine == 0) {
             if (playFunc != null) {
                 Scriptable scope = playFunc.getPrototype();
-                return playFunc.call(getScriptContext(), scope, scope, new Object[]{flag, id, vipFlags}).toString();
+                String res = playFunc.call(RhinoContext(), scope, scope, new Object[]{flag, id, vipFlags}).toString();
+                return res;
             }
             return "";
         }
@@ -261,7 +257,7 @@ public class SpiderJS extends Spider {
 
         if (searchFunc != null) {
             Scriptable scope = searchFunc.getPrototype();
-            return searchFunc.call(getScriptContext(), scope, scope, new Object[]{key, quick}).toString();
+            return searchFunc.call(RhinoContext(), scope, scope, new Object[]{key, quick}).toString();
         }
         return "";
     }

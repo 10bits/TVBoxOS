@@ -1,7 +1,8 @@
 package io.zwz.analyze
 
 import com.github.tvbox.quickjs.JSMethod
-import io.zwz.analyze.constant.AppConst.JS_ENGINE
+import com.script.SimpleBindings
+import io.zwz.analyze.constant.AppConst.SCRIPT_ENGINE
 import io.zwz.analyze.constant.AppPattern.JS_PATTERN
 import io.zwz.analyze.entities.BaseBook
 import io.zwz.analyze.entities.BookChapter
@@ -14,7 +15,6 @@ import org.mozilla.javascript.NativeObject
 import java.net.URL
 import java.util.*
 import java.util.regex.Pattern
-import javax.script.SimpleBindings
 import kotlin.collections.HashMap
 
 /**
@@ -664,7 +664,7 @@ class AnalyzeRule() : JsExtensions {
         bindings["baseUrl"] = baseUrl
         return runBlocking {
             try {
-                JS_ENGINE.eval(jsStr, bindings)
+                SCRIPT_ENGINE.eval(jsStr, bindings)
             } catch (e: Exception) {
                 e.message
             }
