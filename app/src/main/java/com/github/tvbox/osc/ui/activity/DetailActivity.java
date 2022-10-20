@@ -77,8 +77,11 @@ import me.jessyan.autosize.utils.AutoSizeUtils;
 
 import android.graphics.Paint;
 import android.text.TextPaint;
+
 import androidx.annotation.NonNull;
+
 import android.graphics.Typeface;
+
 import androidx.recyclerview.widget.RecyclerView;
 
 /**
@@ -121,7 +124,7 @@ public class DetailActivity extends BaseActivity {
     boolean seriesSelect = false;
     private View seriesFlagFocus = null;
     private boolean isReverse;
-    private String preFlag="";
+    private String preFlag = "";
     private boolean firstReverse;
     private V7GridLayoutManager mGridViewLayoutMgr = null;
     private HashMap<String, String> mCheckSources = null;
@@ -193,22 +196,47 @@ public class DetailActivity extends BaseActivity {
                     vodInfo.reverseSort = !vodInfo.reverseSort;
                     isReverse = !isReverse;
                     vodInfo.reverse();
-                    vodInfo.playIndex=(vodInfo.seriesMap.get(vodInfo.playFlag).size()-1)-vodInfo.playIndex;
+                    vodInfo.playIndex = (vodInfo.seriesMap.get(vodInfo.playFlag).size() - 1) - vodInfo.playIndex;
 //                    insertVod(sourceKey, vodInfo);
                     firstReverse = true;
                     seriesAdapter.notifyDataSetChanged();
                 }
             }
         });
+
+        ivThumb.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                FastClickCheckUtil.check(view);
+                if (showPreview) {
+                    toggleFullPreview();
+                    if (firstReverse) {
+                        jumpToPlay();
+                        firstReverse = false;
+                    }
+                } else {
+                    jumpToPlay();
+                }
+            }
+        });
+        /**/
+        llPlayerFragmentContainerBlock.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View view) {
+                FastClickCheckUtil.check(view);
+                toggleFullPreview();
+            }
+        });
+
         tvPlay.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
                 FastClickCheckUtil.check(v);
                 if (showPreview) {
                     toggleFullPreview();
-                    if(firstReverse){
+                    if (firstReverse) {
                         jumpToPlay();
-                        firstReverse=false;
+                        firstReverse = false;
                     }
                 } else {
                     jumpToPlay();
@@ -266,9 +294,9 @@ public class DetailActivity extends BaseActivity {
             @Override
             public void onClick(View v) {
                 //获取剪切板管理器
-                ClipboardManager cm = (ClipboardManager)getSystemService(mContext.CLIPBOARD_SERVICE);
+                ClipboardManager cm = (ClipboardManager) getSystemService(mContext.CLIPBOARD_SERVICE);
                 //设置内容到剪切板
-                cm.setPrimaryClip(ClipData.newPlainText(null, tvPlayUrl.getText().toString().replace("播放地址：","")));
+                cm.setPrimaryClip(ClipData.newPlainText(null, tvPlayUrl.getText().toString().replace("播放地址：", "")));
                 Toast.makeText(DetailActivity.this, "已复制", Toast.LENGTH_SHORT).show();
             }
         });
@@ -358,7 +386,7 @@ public class DetailActivity extends BaseActivity {
                     if (showPreview && !fullWindows) toggleFullPreview();
                     if (!showPreview || reload) {
                         jumpToPlay();
-                        firstReverse=false;
+                        firstReverse = false;
                     }
                 }
             }
@@ -418,12 +446,13 @@ public class DetailActivity extends BaseActivity {
         if (vodInfo.seriesMap.get(vodInfo.playFlag) != null) {
             boolean canSelect = true;
             for (int j = 0; j < vodInfo.seriesMap.get(vodInfo.playFlag).size(); j++) {
-                if(vodInfo.seriesMap.get(vodInfo.playFlag).get(j).selected == true){
+                if (vodInfo.seriesMap.get(vodInfo.playFlag).get(j).selected == true) {
                     canSelect = false;
                     break;
                 }
             }
-            if(canSelect)vodInfo.seriesMap.get(vodInfo.playFlag).get(vodInfo.playIndex).selected = true;
+            if (canSelect)
+                vodInfo.seriesMap.get(vodInfo.playFlag).get(vodInfo.playIndex).selected = true;
         }
 
         Paint pFont = new Paint();
@@ -432,18 +461,18 @@ public class DetailActivity extends BaseActivity {
 
         List<VodInfo.VodSeries> list = vodInfo.seriesMap.get(vodInfo.playFlag);
         int w = 1;
-        for(int i =0; i < list.size(); ++i){
+        for (int i = 0; i < list.size(); ++i) {
             String name = list.get(i).name;
             pFont.getTextBounds(name, 0, name.length(), rect);
-            if(w < rect.width()){
+            if (w < rect.width()) {
                 w = rect.width();
             }
         }
         w += 32;
-        int screenWidth = getWindowManager().getDefaultDisplay().getWidth()/3;
-        int offset = screenWidth/w;
-        if(offset <=1) offset =1;
-        if(offset > 6) offset =6;
+        int screenWidth = getWindowManager().getDefaultDisplay().getWidth() / 3;
+        int offset = screenWidth / w;
+        if (offset <= 1) offset = 1;
+        if (offset > 6) offset = 6;
         this.mGridViewLayoutMgr.setSpanCount(offset);
 
         seriesAdapter.setNewData(vodInfo.seriesMap.get(vodInfo.playFlag));
@@ -461,6 +490,7 @@ public class DetailActivity extends BaseActivity {
             return;
         }
         view.setVisibility(View.VISIBLE);
+        view.setTextSize(12);
         view.setText(Html.fromHtml(getHtml(tag, info)));
     }
 
@@ -490,7 +520,7 @@ public class DetailActivity extends BaseActivity {
                     setTextShow(tvType, "类型：", mVideo.type);
                     setTextShow(tvActor, "演员：", mVideo.actor);
                     setTextShow(tvDirector, "导演：", mVideo.director);
-                    setTextShow(tvDes, "内容简介：", removeHtmlTag(mVideo.des));
+                    setTextShow(tvDes, "简介：", removeHtmlTag(mVideo.des));
                     if (!TextUtils.isEmpty(mVideo.pic)) {
                         Picasso.get()
                                 .load(DefaultConfig.checkReplaceProxy(mVideo.pic))
@@ -542,7 +572,7 @@ public class DetailActivity extends BaseActivity {
                                 flag.selected = false;
                         }
                         //设置播放地址
-                        setTextShow(tvPlayUrl, "播放地址：", vodInfo.seriesMap.get(vodInfo.playFlag).get(0).url);
+                        setTextShow(tvPlayUrl, "地址：", vodInfo.seriesMap.get(vodInfo.playFlag).get(0).url);
                         seriesFlagAdapter.setNewData(vodInfo.seriesFlags);
                         mGridViewFlag.scrollToPosition(flagScrollTo);
 
@@ -805,21 +835,22 @@ public class DetailActivity extends BaseActivity {
         return super.dispatchKeyEvent(event);
     }
 
-    @Override
-    public boolean dispatchTouchEvent(MotionEvent ev) {
-        if (showPreview && !fullWindows) {
-            Rect editTextRect = new Rect();
-            llPlayerFragmentContainerBlock.getHitRect(editTextRect);
-            if (editTextRect.contains((int) ev.getX(), (int) ev.getY())) {
-                return true;
-            }
-        }
-        return super.dispatchTouchEvent(ev);
-    }
+//    @Override
+//    public boolean dispatchTouchEvent(MotionEvent ev) {
+//        if (showPreview && !fullWindows) {
+//            Rect editTextRect = new Rect();
+//            llPlayerFragmentContainerBlock.getHitRect(editTextRect);
+//            if (editTextRect.contains((int) ev.getX(), (int) ev.getY())) {
+//                return true;
+//            }
+//        }
+//        return super.dispatchTouchEvent(ev);
+//    }
 
     // preview
     VodInfo previewVodInfo = null;
-    boolean showPreview = Hawk.get(HawkConfig.SHOW_PREVIEW, true);; // true 开启 false 关闭
+    boolean showPreview = Hawk.get(HawkConfig.SHOW_PREVIEW, true);
+    ; // true 开启 false 关闭
     boolean fullWindows = false;
     ViewGroup.LayoutParams windowsPreview = null;
     ViewGroup.LayoutParams windowsFull = null;
