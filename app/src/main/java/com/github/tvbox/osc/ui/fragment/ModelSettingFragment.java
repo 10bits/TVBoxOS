@@ -243,6 +243,7 @@ public class ModelSettingFragment extends BaseLazyFragment {
                 ArrayList<Integer> engines = new ArrayList<>();
                 engines.add(0);
                 engines.add(1);
+                engines.add(2);
                 SelectDialog<Integer> dialog = new SelectDialog<>(mActivity);
                 dialog.setTip("请选择爬虫JS引擎");
                 dialog.setAdapter(new SelectDialogAdapter.SelectDialogInterface<Integer>() {
