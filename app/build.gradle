@@ -64,7 +64,7 @@ android {
 
 dependencies {
     api fileTree(dir: "libs", include: ["*.jar"])
-
+    implementation fileTree(dir: 'D:/golang/gohome/src/catvod', include: ['*.aar', '*.jar'], exclude: [])
     //kotlin support
     implementation "androidx.core:core-ktx:1.7.0"
     implementation "org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version"
