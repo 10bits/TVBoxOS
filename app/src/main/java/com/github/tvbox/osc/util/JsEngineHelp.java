@@ -9,5 +9,6 @@ public class JsEngineHelp {
         engines = new HashMap<>();
         engines.put(0, "RhinoJS");
         engines.put(1, "QuickJS");
+        engines.put(2,"GoJS");
     }
 }

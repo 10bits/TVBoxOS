@@ -21,7 +21,10 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.UUID;
 
+import catvod.Catvod;
+import catvod.GoSpider;
 import io.zwz.analyze.AnalyzeRule;
+import io.zwz.analyze.utils.GsonExtensionsKt;
 
 public class SpiderJS extends Spider {
 
@@ -38,7 +41,7 @@ public class SpiderJS extends Spider {
     private NativeFunction detailFunc = null;
     private NativeFunction playFunc = null;
     private NativeFunction searchFunc = null;
-
+    private GoSpider goSpider = null;
 
     public SpiderJS(String key, String js, String ext) {
         this.key = key;
@@ -73,6 +76,16 @@ public class SpiderJS extends Spider {
                         e.printStackTrace();
                     }
                     engine = Hawk.get(HawkConfig.JS_ENGINE, 0);
+                    if (engine == 2 || jsContent.contains("__GO_SPIDER__")) {
+                        engine = 2;
+                        try {
+                            goSpider = Catvod.newSpider(jsContent);
+                        } catch (Exception e) {
+                            e.printStackTrace();
+                        }
+                        goSpider.init(ext);
+                        return null;
+                    }
                     jsContent = jsContent.replace("__JS_SPIDER__", "globalThis." + moduleKey);
                     //use quickJs
                     if (engine == 1) {
@@ -161,6 +174,11 @@ public class SpiderJS extends Spider {
     public String homeContent(boolean filter) {
         if (engine == 1) {
             return postFunc("home", filter);
+        } else if (engine == 2) {
+            if (goSpider != null) {
+                return goSpider.home(filter);
+            }
+            return "";
         }
         if (homeFunc != null) {
             Scriptable scope = homeFunc.getPrototype();
@@ -173,6 +191,11 @@ public class SpiderJS extends Spider {
     public String homeVideoContent() {
         if (engine == 1) {
             return postFunc("homeVod");
+        } else if (engine == 2) {
+            if (goSpider != null) {
+                return goSpider.homeVod();
+            }
+            return "";
         }
         if (homeVodFunc != null) {
             Scriptable scope = homeVodFunc.getPrototype();
@@ -187,6 +210,11 @@ public class SpiderJS extends Spider {
             if (categoryFunc != null) {
                 Scriptable scope = categoryFunc.getPrototype();
                 return categoryFunc.call(RhinoContext(), scope, scope, new Object[]{tid, pg, filter, extend}).toString();
+            }
+            return "";
+        } else if (engine == 2) {
+            if (goSpider != null) {
+                return goSpider.category(tid, pg, filter, GsonExtensionsKt.getGSON().toJson(extend));
             }
             return "";
         }
@@ -213,6 +241,11 @@ public class SpiderJS extends Spider {
     public String detailContent(List<String> ids) {
         if (engine == 1) {
             return postFunc("detail", ids.get(0));
+        } else if (engine == 2) {
+            if (goSpider != null) {
+                return goSpider.detail(ids.get(0));
+            }
+            return "";
         }
         if (detailFunc != null) {
             Scriptable scope = detailFunc.getPrototype();
@@ -228,6 +261,11 @@ public class SpiderJS extends Spider {
                 Scriptable scope = playFunc.getPrototype();
                 String res = playFunc.call(RhinoContext(), scope, scope, new Object[]{flag, id, vipFlags}).toString();
                 return res;
+            }
+            return "";
+        } else if (engine == 2) {
+            if (goSpider != null) {
+                return goSpider.play(flag, id, GsonExtensionsKt.getGSON().toJson(vipFlags));
             }
             return "";
         }
@@ -253,6 +291,11 @@ public class SpiderJS extends Spider {
     public String searchContent(String key, boolean quick) {
         if (engine == 1) {
             return postFunc("search", key, quick);
+        } else if (engine == 2) {
+            if (goSpider != null) {
+                return goSpider.search(key, quick);
+            }
+            return "";
         }
 
         if (searchFunc != null) {
