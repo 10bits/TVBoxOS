@@ -5,6 +5,8 @@ import android.view.View;
 import android.widget.ImageView;
 import android.widget.TextView;
 
+import com.bumptech.glide.Glide;
+import com.bumptech.glide.request.RequestOptions;
 import com.chad.library.adapter.base.BaseQuickAdapter;
 import com.chad.library.adapter.base.BaseViewHolder;
 import com.github.tvbox.osc.R;
@@ -12,6 +14,8 @@ import com.github.tvbox.osc.bean.Movie;
 import com.github.tvbox.osc.picasso.RoundTransformation;
 import com.github.tvbox.osc.util.DefaultConfig;
 import com.github.tvbox.osc.util.MD5;
+import com.github.tvbox.osc.util.transform.CornerTransform;
+import com.github.tvbox.osc.util.transform.GlideRoundTransform;
 import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
@@ -27,13 +31,13 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
     private boolean mShowList = false;
 
     public GridAdapter(boolean l) {
-        super( l ? R.layout.item_list:R.layout.item_grid, new ArrayList<>());
+        super(l ? R.layout.item_list : R.layout.item_grid, new ArrayList<>());
         this.mShowList = l;
     }
 
     @Override
     protected void convert(BaseViewHolder helper, Movie.Video item) {
-        if(this.mShowList) {
+        if (this.mShowList) {
             helper.setText(R.id.tvNote, item.note);
             helper.setText(R.id.tvName, item.name);
             ImageView ivThumb = helper.getView(R.id.ivThumb);
@@ -88,15 +92,29 @@ public class GridAdapter extends BaseQuickAdapter<Movie.Video, BaseViewHolder> {
         ImageView ivThumb = helper.getView(R.id.ivThumb);
         //由于部分电视机使用glide报错
         if (!TextUtils.isEmpty(item.pic)) {
-            Picasso.get()
+            CornerTransform transformation = new CornerTransform(mContext, AutoSizeUtils.mm2px(mContext, 10));
+            Glide.with(helper.itemView.getContext())
+                    .asBitmap()
+                    .skipMemoryCache(true)
                     .load(DefaultConfig.checkReplaceProxy(item.pic))
-                    .transform(new RoundTransformation(MD5.string2MD5(item.pic + "position=" + helper.getLayoutPosition()))
-                            .centerCorp(true)
+                    .apply(new RequestOptions()
+                            .fitCenter()
                             .override(AutoSizeUtils.mm2px(mContext, 300), AutoSizeUtils.mm2px(mContext, 400))
-                            .roundRadius(AutoSizeUtils.mm2px(mContext, 10), RoundTransformation.RoundType.ALL))
-                    .placeholder(R.drawable.img_loading_placeholder)
-                    .error(R.drawable.img_loading_placeholder)
+                            .dontAnimate()
+                            .placeholder(R.drawable.img_loading_placeholder)
+                            .error(R.drawable.img_loading_placeholder))
+                    .transform(transformation)
                     .into(ivThumb);
+            ;
+//            Picasso.get()
+//                    .load(DefaultConfig.checkReplaceProxy(item.pic))
+//                    .transform(new RoundTransformation(MD5.string2MD5(item.pic + "position=" + helper.getLayoutPosition()))
+//                            .centerCorp(true)
+//                            .override(AutoSizeUtils.mm2px(mContext, 300), AutoSizeUtils.mm2px(mContext, 400))
+//                            .roundRadius(AutoSizeUtils.mm2px(mContext, 10), RoundTransformation.RoundType.ALL))
+//                    .placeholder(R.drawable.img_loading_placeholder)
+//                    .error(R.drawable.img_loading_placeholder)
+//                    .into(ivThumb);
         } else {
             ivThumb.setImageResource(R.drawable.img_loading_placeholder);
         }
