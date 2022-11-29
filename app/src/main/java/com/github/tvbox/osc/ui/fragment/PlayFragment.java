@@ -637,6 +637,7 @@ public class PlayFragment extends BaseLazyFragment {
                             playUrl(playUrl + url, headers);
                         }
                     } catch (Throwable th) {
+                        th.printStackTrace();
 //                        errorWithRetry("获取播放信息错误", true);
 //                        Toast.makeText(mContext, "获取播放信息错误1", Toast.LENGTH_SHORT).show();
                     }

@@ -10,6 +10,7 @@ import android.content.DialogInterface;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
+import android.util.Log;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.ViewGroup;
@@ -36,6 +37,7 @@ import com.github.tvbox.osc.event.RefreshEvent;
 import com.github.tvbox.osc.presenter.MainPresenterImpl;
 import com.github.tvbox.osc.presenter.contract.MainContract;
 import com.github.tvbox.osc.server.ControlManager;
+import com.github.tvbox.osc.service.GoService;
 import com.github.tvbox.osc.ui.adapter.HomePageAdapter;
 import com.github.tvbox.osc.ui.adapter.SelectDialogAdapter;
 import com.github.tvbox.osc.ui.adapter.SortAdapter;
@@ -93,7 +95,7 @@ public class HomeActivity extends BaseActivity<MainContract.Presenter> implement
         public void run() {
             Date date = new Date();
             @SuppressLint("SimpleDateFormat")
-            SimpleDateFormat timeFormat = new SimpleDateFormat("yyyy/MM/dd HH:mm");
+            SimpleDateFormat timeFormat = new SimpleDateFormat("yyyy年MM月dd日 EEEE HH:mm:ss");
             tvDate.setText(timeFormat.format(date));
             mHandler.postDelayed(this, 1000);
         }
@@ -118,7 +120,7 @@ public class HomeActivity extends BaseActivity<MainContract.Presenter> implement
             Bundle bundle = intent.getExtras();
             useCacheConfig = bundle.getBoolean("useCache", false);
         }
-        initData();
+//        initData();
     }
 
     private void initView() {
@@ -246,6 +248,34 @@ public class HomeActivity extends BaseActivity<MainContract.Presenter> implement
 
     private boolean dataInitOk = false;
     private boolean jarInitOk = false;
+
+    @Override
+    protected void onStop() {
+        super.onStop();
+    }
+
+    @Override
+    public void updateTvName() {
+        SourceBean home = ApiConfig.get().getHomeSourceBean();
+        if (home != null && home.getName() != null && !home.getName().isEmpty())
+            tvName.setText(home.getName());
+    }
+
+    @Override
+    public boolean checkPermission(String permission) {
+        return hasPermission(permission);
+    }
+
+    @Override
+    public void getHomeSort() {
+        sourceViewModel.getSort(ApiConfig.get().getHomeSourceBean().getKey());
+        if (hasPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)) {
+            LOG.e("有");
+        } else {
+            LOG.e("无");
+        }
+        updateTvName();
+    }
 
     private void initData() {
         SourceBean home = ApiConfig.get().getHomeSourceBean();
@@ -462,6 +492,11 @@ public class HomeActivity extends BaseActivity<MainContract.Presenter> implement
     }
 
     @Override
+    protected void firstRequest() {
+        mPresenter.initSpider();
+    }
+
+    @Override
     protected void onResume() {
         super.onResume();
         mHandler.post(mRunnable);
@@ -653,7 +688,12 @@ public class HomeActivity extends BaseActivity<MainContract.Presenter> implement
     }
 
     @Override
-    public void toast(String msg) {
+    public void setTvDate(String date) {
+        tvDate.setText(date);
+    }
 
+    @Override
+    public boolean getUseCacheConfig() {
+        return useCacheConfig;
     }
 }

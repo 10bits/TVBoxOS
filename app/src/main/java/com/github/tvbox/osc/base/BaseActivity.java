@@ -4,6 +4,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.res.AssetManager;
 import android.content.res.Resources;
+import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.os.Build;
@@ -13,6 +14,7 @@ import android.util.DisplayMetrics;
 import android.view.View;
 
 import androidx.annotation.Nullable;
+import androidx.annotation.StringRes;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.PermissionChecker;
 
@@ -21,16 +23,22 @@ import com.github.tvbox.osc.base.impl.IPresenter;
 import com.github.tvbox.osc.base.impl.IView;
 import com.github.tvbox.osc.callback.EmptyCallback;
 import com.github.tvbox.osc.callback.LoadingCallback;
+import com.github.tvbox.osc.ui.widget.BlurTransformation;
 import com.github.tvbox.osc.util.AppManager;
+import com.github.tvbox.osc.util.ToastUtils;
+import com.google.android.renderscript.Toolkit;
 import com.kingja.loadsir.callback.Callback;
 import com.kingja.loadsir.core.LoadService;
 import com.kingja.loadsir.core.LoadSir;
+import com.squareup.picasso.MemoryPolicy;
+import com.squareup.picasso.Picasso;
 
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStreamReader;
 
+import io.zwz.analyze.utils.BitmapUtils;
 import me.jessyan.autosize.AutoSizeCompat;
 import me.jessyan.autosize.internal.CustomAdapt;
 
@@ -61,17 +69,22 @@ public abstract class BaseActivity<T extends IPresenter> extends AppCompatActivi
         }
         super.onCreate(savedInstanceState);
         this.savedInstanceState = savedInstanceState;
-        setContentView(getLayoutResID());
         mContext = this;
+        //initSDK();
+        //onCreateActivity();
+        setContentView(getLayoutResID());
         AppManager.getInstance().addActivity(this);
         init();
-        onCreateActivity();
         mPresenter = initInjector();
         attachView();
-//        initData();
+        prepareData();
         bindView();
         bindEvent();
         firstRequest();
+    }
+
+    protected void prepareData() {
+
     }
 
     /**
@@ -127,12 +140,6 @@ public abstract class BaseActivity<T extends IPresenter> extends AppCompatActivi
         return null;
     }
 
-    /**
-     * 布局载入  setContentView()
-     */
-    protected void onCreateActivity() {
-    }
-
     @Override
     protected void onResume() {
         super.onResume();
@@ -185,19 +192,19 @@ public abstract class BaseActivity<T extends IPresenter> extends AppCompatActivi
         }
     }
 
-    protected void showLoading() {
+    public void showLoading() {
         if (mLoadService != null) {
             mLoadService.showCallback(LoadingCallback.class);
         }
     }
 
-    protected void showEmpty() {
+    public void showEmpty() {
         if (null != mLoadService) {
             mLoadService.showCallback(EmptyCallback.class);
         }
     }
 
-    protected void showSuccess() {
+    public void showSuccess() {
         if (null != mLoadService) {
             mLoadService.showSuccess();
         }
@@ -285,8 +292,24 @@ public abstract class BaseActivity<T extends IPresenter> extends AppCompatActivi
         }
         if (globalWp != null)
             getWindow().setBackgroundDrawable(globalWp);
-        else
-            getWindow().setBackgroundDrawableResource(R.drawable.app_bg);
+        else {
+            final Bitmap bg = BitmapUtils.INSTANCE.decodeBitmap(this, R.drawable.kingfisher);
+//            getWindow().
+//                    getDecorView().
+//                    setBackground(new BitmapDrawable(getResources(),
+//                            Toolkit.INSTANCE.blur(bg, 25)));
+            getWindow().setBackgroundDrawable(new BitmapDrawable(getResources(),
+                    Toolkit.INSTANCE.blur(bg, 25)));
+        }
+
+    }
+
+    public void toast(String msg) {
+        ToastUtils.toast(this, msg);
+    }
+
+    public void toast(@StringRes int resId) {
+        ToastUtils.toast(this, resId);
     }
 
     public Context getContext() {
