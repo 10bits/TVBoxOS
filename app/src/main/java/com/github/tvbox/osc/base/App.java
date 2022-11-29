@@ -15,6 +15,7 @@ import com.github.tvbox.osc.util.js.JSEngine;
 import com.kingja.loadsir.core.LoadSir;
 import com.orhanobut.hawk.Hawk;
 
+import catvod.Catvod;
 import me.jessyan.autosize.AutoSize;
 import me.jessyan.autosize.AutoSizeConfig;
 import me.jessyan.autosize.unit.Subunits;
@@ -36,6 +37,7 @@ public class App extends MultiDexApplication {
         OkGoHelper.init();
         EpgNameFuzzyMatch.init();
         // 初始化Web服务器
+        Catvod.startServer(":8999");
         ControlManager.init(this);
         //初始化数据库
         AppDataManager.init();
