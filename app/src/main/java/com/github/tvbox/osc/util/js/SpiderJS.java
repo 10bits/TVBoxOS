@@ -79,7 +79,7 @@ public class SpiderJS extends Spider {
                     if (engine == 2 || jsContent.contains("__GO_SPIDER__")) {
                         engine = 2;
                         try {
-                            goSpider = Catvod.newSpider(jsContent);
+                            goSpider = Catvod.newGoSpider(jsContent);
                         } catch (Exception e) {
                             e.printStackTrace();
                         }
